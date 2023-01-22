@@ -56,9 +56,6 @@ struct Params {
     /// Sequence two input separator
     #[arg(long, default_value = " ")]
     s2_char_delim: String,
-    /// Delta threshold for EM training termination
-    #[arg(long, default_value = "1e-10")]
-    thresh: f64,
 }
 
 #[derive(Debug)]
