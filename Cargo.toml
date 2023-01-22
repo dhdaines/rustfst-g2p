@@ -1,5 +1,5 @@
 [package]
-name = "rustg2p"
+name = "rustfst-g2p"
 version = "0.1.0"
 edition = "2021"
 description = "Train finite-state transducers for grapheme-to-phoneme conversion"

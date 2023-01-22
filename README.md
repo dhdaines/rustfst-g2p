@@ -1,5 +1,5 @@
-rustg2p: the velociraptor of pronunciation generators
-=====================================================
+rustfst-g2p: the velociraptor of pronunciation generators
+=========================================================
 
 Back in days of yore, we used quaint devices known as weighted
 finite-state transducers to accomplish a variety of natural language

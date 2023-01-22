@@ -449,7 +449,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustg2p"
+name = "rustfst-g2p"
 version = "0.1.0"
 dependencies = [
  "anyhow",
