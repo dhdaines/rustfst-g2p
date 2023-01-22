@@ -27,8 +27,8 @@ impressive piece of free software with some serious problems:
 - The resulting binaries are brontosaurically hugeungous
 
 The venerable [AT&T FSM
-library](https://www.openfst.org/twiki/bin/view/Contrib/FsmLibrary),
-was more than good enough for all useful tasks, but sadly was never
+library](https://www.openfst.org/twiki/bin/view/Contrib/FsmLibrary)
+was more than good enough for all useful tasks but sadly was never
 released as free software, and thus, much as C++ "improved" on C, so
 OpenFST and OpenGRM "improved" on the FSM and GRM libraries, with the
 predictable results noted above.
