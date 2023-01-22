@@ -1,0 +1,12 @@
+[package]
+name = "rustg2p"
+version = "0.1.0"
+edition = "2021"
+description = "Train finite-state transducers for grapheme-to-phoneme conversion"
+license = "BSD-2-Clause"
+
+[dependencies]
+anyhow = "1.0.68"
+clap = { version = "4.1.1", features = ["derive"] }
+rustfst = "0.13.1"
+
