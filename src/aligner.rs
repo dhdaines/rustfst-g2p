@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Result};
-use clap::Parser;
 use rustfst::algorithms::shortest_path;
 use rustfst::algorithms::weight_converters::SimpleWeightConverter;
 use rustfst::prelude::*;
@@ -12,55 +11,39 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-#[derive(Parser, Debug)]
-#[command(author, version, about)]
-pub struct Params {
-    /// Input dictionary file
-    input: PathBuf,
+/// Configuration parameters for the aligner
+#[derive(Debug)]
+pub struct Config {
     /// Maximum length of an input multi-token
-    #[arg(long, default_value_t = 2)]
-    seq1_max: u8,
+    pub seq1_max: u8,
     /// Maximum length of an output multi-token
-    #[arg(long, default_value_t = 2)]
-    seq2_max: u8,
-    /// Maximum number of EM iterations to perform
-    #[arg(long, default_value_t = 11)]
-    pub iter: u8,
+    pub seq2_max: u8,
     /// Allow deletion of input tokens
-    #[arg(long)]
-    seq1_del: bool,
+    pub seq1_del: bool,
     /// Allow deletion of output tokens
-    #[arg(long)]
-    seq2_del: bool,
+    pub seq2_del: bool,
     /// Restrict to N-1 and 1-M alignments
-    #[arg(long)]
-    restrict: bool,
+    pub restrict: bool,
     /// Multi-token separator for input tokens
-    #[arg(long, default_value = "|")]
-    seq1_sep: String,
+    pub seq1_sep: String,
     /// Multi-token separator for output tokens
-    #[arg(long, default_value = "|")]
-    seq2_sep: String,
+    pub seq2_sep: String,
     /// Token used to separate input-output subsequences in the g2p model
-    #[arg(long, default_value = "}")]
-    s1s2_sep: String,
+    pub s1s2_sep: String,
     /// Epsilon symbol
-    #[arg(long, default_value = "<eps>")]
-    eps: String,
+    pub eps: String,
     /// Skip token used to represent null transitions.  Distinct from epsilon
-    #[arg(long, default_value = "_")]
-    skip: String,
+    pub skip: String,
     /// Sequence one input separator
-    #[arg(long, default_value = "")]
-    s1_char_delim: String,
+    pub s1_char_delim: String,
     /// Sequence two input separator
-    #[arg(long, default_value = " ")]
-    s2_char_delim: String,
+    pub s2_char_delim: String,
 }
 
+/// Grapheme to phoneme aligner
 #[derive(Debug)]
 pub struct Aligner {
-    pub params: Params,
+    pub config: Config,
     isyms: SymbolTable,
     fsas: Vec<VectorFst<LogWeight>>,
     alignment_model: HashMap<Label, LogWeight>,
@@ -70,26 +53,27 @@ pub struct Aligner {
 }
 
 impl Aligner {
-    pub fn new(params: Params) -> Aligner {
+    /// Construct a new aligner with the given configuration
+    pub fn new(config: Config) -> Aligner {
         let mut isyms = SymbolTable::empty();
         let fsas = Vec::<VectorFst<LogWeight>>::new();
         let alignment_model = HashMap::<Label, LogWeight>::new();
         let prev_alignment_model = HashMap::<Label, LogWeight>::new();
         let total = LogWeight::zero();
         let prev_total = LogWeight::zero();
-        isyms.add_symbol(&params.eps);
-        isyms.add_symbol(&params.skip);
+        isyms.add_symbol(&config.eps);
+        isyms.add_symbol(&config.skip);
         // use of _ here is "dangerous", apparently
-        isyms.add_symbol(params.seq1_sep.as_str().to_owned() + "_" + params.seq2_sep.as_str());
-        isyms.add_symbol(&params.s1s2_sep);
+        isyms.add_symbol(config.seq1_sep.as_str().to_owned() + "_" + config.seq2_sep.as_str());
+        isyms.add_symbol(&config.s1s2_sep);
         // not sure what this is for but we will add it to have the same ids
-        let model_params = format!(
+        let model_config = format!(
             "{}_{}_{}_{}",
-            params.seq1_del, params.seq2_del, params.seq1_max, params.seq2_max
+            config.seq1_del, config.seq2_del, config.seq1_max, config.seq2_max
         );
-        isyms.add_symbol(model_params);
+        isyms.add_symbol(model_config);
         Aligner {
-            params,
+            config,
             isyms,
             fsas,
             alignment_model,
@@ -98,8 +82,9 @@ impl Aligner {
             prev_total,
         }
     }
-    pub fn load_dictionary(&mut self) -> Result<()> {
-        let fh = File::open(&self.params.input)?;
+    /// Initialize alignment from a pronunciation dictionary in text format
+    pub fn load_dictionary(&mut self, input: &PathBuf) -> Result<()> {
+        let fh = File::open(input)?;
         let reader = BufReader::new(fh);
         for line in reader.lines() {
             if let Ok(spam) = line {
@@ -111,11 +96,11 @@ impl Aligner {
                     ));
                 }
                 let seq1: Vec<&str> = fields[0]
-                    .split(&self.params.s1_char_delim)
+                    .split(&self.config.s1_char_delim)
                     .filter(|s| !s.is_empty())
                     .collect();
                 let seq2: Vec<&str> = fields[1]
-                    .split(&self.params.s2_char_delim)
+                    .split(&self.config.s2_char_delim)
                     .filter(|s| !s.is_empty())
                     .collect();
                 self.add_entry(&seq1, &seq2)?;
@@ -125,7 +110,7 @@ impl Aligner {
     }
 
     fn add_entry(&mut self, seq1: &Vec<&str>, seq2: &Vec<&str>) -> Result<()> {
-        let cli = &self.params;
+        let cli = &self.config;
         let skip = cli.skip.as_str();
         let s1s2_sep = cli.s1s2_sep.as_str();
         let seq1_sep = cli.seq1_sep.as_str();
@@ -182,7 +167,7 @@ impl Aligner {
             .unwrap();
         fsa.set_final(final_state, LogWeight::one())?;
         // unless seq1_del && seq2_del, we will have unconnected states
-        if !(self.params.seq1_del && self.params.seq2_del) {
+        if !(self.config.seq1_del && self.config.seq2_del) {
             connect(&mut fsa)?;
         }
         if fsa.num_states() == 0 {
@@ -207,10 +192,8 @@ impl Aligner {
         Ok(())
     }
 
+    /// E-step of EM alignment
     pub fn expectation(&mut self) -> Result<()> {
-        // The usual forward-backward algorithm, which is actually fun
-        // to implement in Rust, as opposed to "almost" fun in C++ as
-        // per the original code's comments
         for fsa in &self.fsas {
             let alpha = shortest_distance(fsa, false)?;
             let beta = shortest_distance(fsa, true)?;
@@ -236,6 +219,7 @@ impl Aligner {
         Ok(())
     }
 
+    /// M-step of EM alignment
     pub fn maximization(&mut self) -> Result<f32> {
         let change = (self.total.value() - self.prev_total.value()).abs();
         // Apparently, "results are inconclusive" for the hideous
@@ -264,6 +248,7 @@ impl Aligner {
         Ok(change)
     }
 
+    /// Print alignments found to standard output
     pub fn print_alignments(&self) -> Result<()> {
         let mut mapper = SimpleWeightConverter {};
         for fsa in &self.fsas {
