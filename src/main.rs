@@ -1,6 +1,8 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use rustfst_g2p::aligner::{Aligner, Config as AlignerConfig};
+use rustfst_g2p::align::{Aligner, Config as AlignerConfig};
+use rustfst_g2p::g2p::G2P;
+use rustfst_g2p::train::ngram::NGram;
 use std::path::PathBuf;
 
 #[derive(Parser)]

@@ -1,3 +1,3 @@
-pub mod aligner;
-pub mod pronouncer;
-pub mod trainer;
+pub mod align;
+pub mod g2p;
+pub mod train;
