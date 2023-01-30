@@ -1,3 +1,6 @@
 /target
 ve/
 *~
+p11s
+rustfst
+TODO.md
