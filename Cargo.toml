@@ -9,4 +9,3 @@ license = "BSD-2-Clause"
 anyhow = "1.0.68"
 clap = { version = "4.1.1", features = ["derive"] }
 rustfst = "0.13.1"
-

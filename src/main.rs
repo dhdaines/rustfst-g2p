@@ -57,6 +57,8 @@ enum Commands {
         #[arg(long, default_value = " ")]
         s2_char_delim: String,
     },
+    Train {},
+    G2P {},
 }
 
 fn main() -> Result<()> {
@@ -108,5 +110,7 @@ fn main() -> Result<()> {
             aligner.print_alignments()?;
             Ok(())
         }
+        Commands::Train {} => Ok(()),
+        Commands::G2P {} => Ok(()),
     }
 }

@@ -103,7 +103,10 @@ impl Aligner {
                     .split(&self.config.s2_char_delim)
                     .filter(|s| !s.is_empty())
                     .collect();
-                self.add_entry(&seq1, &seq2)?;
+                // Just ignore failed alignments
+                if let Err(err) = self.add_entry(&seq1, &seq2) {
+                    eprintln!("Ignoring: {}", err);
+                }
             }
         }
         Ok(())
