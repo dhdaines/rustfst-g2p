@@ -2,7 +2,7 @@
 
 TMPDIR=rustfst
 mkdir -p $TMPDIR
-cargo run --release align --iter 5 \
+cargo run --release align --iter 10 \
       --seq1-del=false --seq2-del=true \
       --seq1-max=2 --seq2-max=2 \
       testdata/librispeech.train.sample > $TMPDIR/train.aligned
@@ -12,3 +12,6 @@ farcompilestrings --symbols=$TMPDIR/train.syms --keep_symbols $TMPDIR/train.alig
 ngramprint -ARPA $TMPDIR/train.mod $TMPDIR/train.arpa
 phonetisaurus-arpa2wfst --lm=$TMPDIR/train.arpa --ofile=$TMPDIR/model.fst
 fstprint $TMPDIR/model.fst > $TMPDIR/model.fst.txt
+cut -d' ' -f1 testdata/librispeech.test.sample > $TMPDIR/test.words
+phonetisaurus-g2pfst --model=$TMPDIR/model.fst --wordlist=$TMPDIR/test.words > $TMPDIR/test.hyp
+python calculateER.py --hyp $TMPDIR/test.hyp --ref testdata/librispeech.test.sample 
