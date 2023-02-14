@@ -11,16 +11,8 @@ use std::sync::Arc;
 pub struct Config {
     /// Grapheme separator
     pub gsep: String,
-    /// Phoneme skip marker
-    pub skip: String,
     /// Write the output FSTs for debugging
     pub write_fsts: bool,
-    /// Reverse input word
-    pub reverse: bool,
-    /// Print scores in output
-    pub print_scores: bool,
-    /// Default scores vals are negative logs
-    pub nlog_probs: bool,
 }
 
 /// Grapheme to phoneme converter
@@ -29,11 +21,9 @@ pub struct G2P {
     /// Configuration
     pub config: Config,
     /// Model (just a WFST actually)
-    pub model: VectorFst<TropicalWeight>,
+    model: VectorFst<TropicalWeight>,
     /// Maximum size of input clusters
-    pub imax: u8,
-    /// Maximum size of output clusters
-    pub omax: u8,
+    imax: u8,
     /// Input symbol table
     isyms: Arc<SymbolTable>,
     /// Output symbol table
@@ -59,7 +49,7 @@ impl G2P {
         );
         tr_sort(&mut model, ILabelCompare {});
         let (imax, _imap, inv_imap) = Self::load_clusters(&isyms)?;
-        let (omax, omap, _inv_omap) = Self::load_clusters(&osyms)?;
+        let (_omax, omap, _inv_omap) = Self::load_clusters(&osyms)?;
         Ok(G2P {
             config,
             model,
@@ -67,7 +57,6 @@ impl G2P {
             osyms,
             imax,
             inv_imap,
-            omax,
             omap,
         })
     }
@@ -135,7 +124,7 @@ impl G2P {
         Ok(fsa)
     }
 
-    pub fn g2p(&self, word: &str) -> Result<(Vec<&str>, f64)> {
+    pub fn g2p(&self, word: &str) -> Result<(Vec<&str>, f32)> {
         let maybe_syms: Result<Vec<Label>, _> = word
             .split(&self.config.gsep)
             .filter(|s| !s.is_empty())
@@ -190,6 +179,6 @@ impl G2P {
                 }
             })
             .collect();
-        Ok((syms?, *path.weight.value() as f64))
+        Ok((syms?, *path.weight.value()))
     }
 }

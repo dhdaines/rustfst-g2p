@@ -4,6 +4,9 @@ use rustfst::prelude::*;
 use rustfst_g2p::align::{Aligner, Config as AlignerConfig};
 use rustfst_g2p::g2p::{Config as G2PConfig, G2P};
 use rustfst_g2p::train::ngram::NGram;
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::BufReader;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -61,22 +64,18 @@ enum Commands {
         s2_char_delim: String,
     },
     Train {},
-    /// Performs grapheme-to-phoneme conversion on input(s)
+    /// Performs grapheme-to-phoneme conversion on input
     G2P {
         /// Path to trained model
         model: PathBuf,
+        /// Input word list
+        input: PathBuf,
         /// Grapheme separator
         #[arg(long, default_value = "")]
         gsep: String,
-        /// Phoneme skip marker
-        #[arg(long, default_value = "_")]
-        skip: String,
         /// Write the output FSTs for debugging
         #[arg(long)]
         write_fsts: bool,
-        /// Reverse input word
-        #[arg(long)]
-        reverse: bool,
         /// Print scores in output
         #[arg(long, action = clap::ArgAction::Set, default_value_t = true)]
         print_scores: bool,
@@ -138,26 +137,31 @@ fn main() -> Result<()> {
         Commands::Train {} => Ok(()),
         Commands::G2P {
             model,
+            input,
             gsep,
-            skip,
             write_fsts,
-            reverse,
             print_scores,
             nlog_probs,
         } => {
             let model = VectorFst::<TropicalWeight>::read(&model)?;
-            let g2p = G2P::new(
-                G2PConfig {
-                    gsep,
-                    skip,
-                    write_fsts,
-                    reverse,
-                    print_scores,
-                    nlog_probs,
-                },
-                model,
-            )?;
-            println!("{:?}", g2p.g2p("USECASE"));
+            let g2p = G2P::new(G2PConfig { gsep, write_fsts }, model)?;
+            let fh = File::open(input)?;
+            let reader = BufReader::new(fh);
+            for line in reader.lines() {
+                let word = line?;
+                let word = word.trim();
+                let (phones, score) = g2p.g2p(word)?;
+                let phonestr: String = phones.join(" ");
+                if print_scores {
+                    if nlog_probs {
+                        println!("{}\t{}\t{}", word, score, phonestr);
+                    } else {
+                        println!("{}\t{}\t{}", word, (-score).exp(), phonestr);
+                    }
+                } else {
+                    println!("{}\t{}", word, phonestr);
+                }
+            }
             Ok(())
         }
     }

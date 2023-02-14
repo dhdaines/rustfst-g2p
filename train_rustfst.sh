@@ -13,5 +13,5 @@ ngramprint -ARPA $TMPDIR/train.mod $TMPDIR/train.arpa
 phonetisaurus-arpa2wfst --lm=$TMPDIR/train.arpa --ofile=$TMPDIR/model.fst
 fstprint $TMPDIR/model.fst > $TMPDIR/model.fst.txt
 cut -d' ' -f1 testdata/librispeech.test.sample > $TMPDIR/test.words
-phonetisaurus-g2pfst --model=$TMPDIR/model.fst --wordlist=$TMPDIR/test.words > $TMPDIR/test.hyp
+cargo run --release g2p $TMPDIR/model.fst $TMPDIR/test.words > $TMPDIR/test.hyp
 python calculateER.py --hyp $TMPDIR/test.hyp --ref testdata/librispeech.test.sample 
