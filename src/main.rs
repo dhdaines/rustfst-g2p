@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use rustfst::prelude::*;
 use rustfst_g2p::align::{Aligner, Config as AlignerConfig};
 use rustfst_g2p::g2p::{Config as G2PConfig, G2P};
-use rustfst_g2p::train::ngram::NGram;
+use rustfst_g2p::train::ngram::{Config as NGramConfig, NGram};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -63,7 +63,18 @@ enum Commands {
         #[arg(long, default_value = " ")]
         s2_char_delim: String,
     },
-    Train {},
+    Train {
+        /// Path to aligned dictionary
+        aligned: PathBuf,
+        /// Path to output model
+        output: PathBuf,
+        /// Order of N-Grams
+        #[arg(long, default_value_t = 5)]
+        order: u8,
+        /// Write the output FSTs for debugging
+        #[arg(long)]
+        write_fsts: bool,
+    },
     /// Performs grapheme-to-phoneme conversion on input
     G2P {
         /// Path to trained model
@@ -137,7 +148,18 @@ fn main() -> Result<()> {
             aligner.print_alignments()?;
             Ok(())
         }
-        Commands::Train {} => Ok(()),
+        Commands::Train {
+            aligned,
+            output,
+            order,
+            write_fsts,
+        } => {
+            let mut trainer = NGram::new(NGramConfig { order, write_fsts });
+            trainer.load_alignments(&aligned)?;
+            let model = trainer.train()?;
+            model.write(&output)?;
+            Ok(())
+        }
         Commands::G2P {
             model,
             input,
@@ -158,9 +180,8 @@ fn main() -> Result<()> {
             )?;
             let fh = File::open(input)?;
             let reader = BufReader::new(fh);
-            for line in reader.lines() {
-                let word = line?;
-                let word = word.trim();
+            for line in reader.lines().flatten() {
+                let word = line.trim();
                 let (phones, score) = g2p.g2p(word)?;
                 let phonestr: String = phones.join(" ");
                 if print_scores {
