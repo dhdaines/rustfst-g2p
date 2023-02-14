@@ -1,7 +1,8 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use rustfst::prelude::*;
 use rustfst_g2p::align::{Aligner, Config as AlignerConfig};
-use rustfst_g2p::g2p::G2P;
+use rustfst_g2p::g2p::{Config as G2PConfig, G2P};
 use rustfst_g2p::train::ngram::NGram;
 use std::path::PathBuf;
 
@@ -60,7 +61,29 @@ enum Commands {
         s2_char_delim: String,
     },
     Train {},
-    G2P {},
+    /// Performs grapheme-to-phoneme conversion on input(s)
+    G2P {
+        /// Path to trained model
+        model: PathBuf,
+        /// Grapheme separator
+        #[arg(long, default_value = "")]
+        gsep: String,
+        /// Phoneme skip marker
+        #[arg(long, default_value = "_")]
+        skip: String,
+        /// Write the output FSTs for debugging
+        #[arg(long)]
+        write_fsts: bool,
+        /// Reverse input word
+        #[arg(long)]
+        reverse: bool,
+        /// Print scores in output
+        #[arg(long, action = clap::ArgAction::Set, default_value_t = true)]
+        print_scores: bool,
+        /// Default scores vals are negative logs
+        #[arg(long, action = clap::ArgAction::Set, default_value_t = true)]
+        nlog_probs: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -113,6 +136,29 @@ fn main() -> Result<()> {
             Ok(())
         }
         Commands::Train {} => Ok(()),
-        Commands::G2P {} => Ok(()),
+        Commands::G2P {
+            model,
+            gsep,
+            skip,
+            write_fsts,
+            reverse,
+            print_scores,
+            nlog_probs,
+        } => {
+            let model = VectorFst::<TropicalWeight>::read(&model)?;
+            let g2p = G2P::new(
+                G2PConfig {
+                    gsep,
+                    skip,
+                    write_fsts,
+                    reverse,
+                    print_scores,
+                    nlog_probs,
+                },
+                model,
+            )?;
+            println!("{:?}", g2p.g2p("USECASE"));
+            Ok(())
+        }
     }
 }
