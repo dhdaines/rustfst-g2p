@@ -14,6 +14,7 @@ pub struct Config {
     pub write_fsts: bool,
 }
 
+/// N-Gram trainer
 pub struct NGram {
     /// Configuration
     pub config: Config,
@@ -54,17 +55,23 @@ impl NGram {
     }
 
     /// Count N-Grams and create fst
-    pub fn get_ngram_counts(&self, model: &StdVectorFst) -> Result<()> {
-        Ok(())
+    pub fn get_ngram_counts(&self, alignments: &Vec<StdVectorFst>) -> Result<StdVectorFst> {
+        let counts = StdVectorFst::new();
+        Ok(counts)
+    }
+
+    /// Make modified Kneser-Ney model
+    pub fn make_kn_model(&self, model: &StdVectorFst) -> Result<StdVectorFst> {
+        let model = StdVectorFst::new();
+        Ok(model)
     }
 
     /// Train an N-Gram model and convert to fst
     pub fn train(&self) -> Result<StdVectorFst> {
-        let model = StdVectorFst::new();
         // Collect counts
-        self.get_ngram_counts(&model);
-
-        // Create N-Grams
+        let counts = self.get_ngram_counts(&self.inputs)?;
+        // Create model
+        let model = self.make_kn_model(&counts)?;
 
         Ok(model)
     }
