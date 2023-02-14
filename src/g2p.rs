@@ -74,7 +74,7 @@ impl G2P {
             .get_symbol(1)
             .ok_or_else(|| anyhow!("Cluster separator not found in symbol table"))?; // FIXME: stupid magic
         let mut maxlen = 1;
-        for i in 2..syms.len() as u32 {
+        for i in 2..syms.len() as Label {
             let sym = syms
                 .get_symbol(i)
                 .expect("Symbol table lies about its size");
@@ -104,7 +104,7 @@ impl G2P {
         let maxlen = maxlen as u32;
         fsa.add_state();
         fsa.set_start(0)?;
-        let nsyms: u32 = word.len().try_into()?;
+        let nsyms: StateId = word.len().try_into()?;
         for i in 0..nsyms {
             fsa.add_state();
             let label = word[i as usize];

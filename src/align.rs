@@ -130,7 +130,7 @@ impl Aligner {
                         let isym = self.isyms.add_symbol(&isymname);
                         // Note: this state doesn't exist yet... ugh!
                         // FIXME: catch and report overflow, don't panic
-                        let ostate: u32 = (i * (seq2.len() + 1) + (j + jl)).try_into().unwrap();
+                        let ostate: StateId = (i * (seq2.len() + 1) + (j + jl)).try_into().unwrap();
                         let tr = Tr::<LogWeight>::new(isym, isym, LogWeight::new(99.0), ostate);
                         fsa.add_tr(istate, tr)?;
                     }
@@ -142,7 +142,7 @@ impl Aligner {
                         let isym = self.isyms.add_symbol(&isymname);
                         // Note: this state doesn't exist yet... ugh!
                         // FIXME: catch and report overflow, don't panic
-                        let ostate: u32 = ((i + ik) * (seq2.len() + 1) + j).try_into().unwrap();
+                        let ostate: StateId = ((i + ik) * (seq2.len() + 1) + j).try_into().unwrap();
                         let tr = Tr::<LogWeight>::new(isym, isym, LogWeight::new(99.0), ostate);
                         fsa.add_tr(istate, tr)?;
                     }
@@ -156,7 +156,7 @@ impl Aligner {
                         }
                         let isymname = s1.to_owned() + s1s2_sep + s2;
                         let isym = self.isyms.add_symbol(&isymname);
-                        let ostate: u32 =
+                        let ostate: StateId =
                             ((i + ik) * (seq2.len() + 1) + (j + jl)).try_into().unwrap();
                         let tr = Tr::<LogWeight>::new(isym, isym, LogWeight::one(), ostate);
                         fsa.add_tr(istate, tr)?;
@@ -165,7 +165,7 @@ impl Aligner {
             }
         }
         fsa.set_start(0)?;
-        let final_state: u32 = ((seq1.len() + 1) * (seq2.len() + 1) - 1)
+        let final_state: StateId = ((seq1.len() + 1) * (seq2.len() + 1) - 1)
             .try_into()
             .unwrap();
         fsa.set_final(final_state, LogWeight::one())?;
