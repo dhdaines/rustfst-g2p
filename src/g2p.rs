@@ -1,3 +1,4 @@
+use crate::StdVectorFst;
 use anyhow::{anyhow, Result};
 use rustfst::algorithms::compose::compose;
 use rustfst::prelude::*;
@@ -26,7 +27,7 @@ pub struct G2P {
     /// Configuration
     pub config: Config,
     /// Model (just a WFST actually)
-    model: VectorFst<TropicalWeight>,
+    model: StdVectorFst,
     /// Maximum size of input clusters
     imax: u8,
     /// Input symbol table
@@ -41,7 +42,7 @@ pub struct G2P {
 }
 
 impl G2P {
-    pub fn new(config: Config, mut model: VectorFst<TropicalWeight>) -> Result<G2P> {
+    pub fn new(config: Config, mut model: StdVectorFst) -> Result<G2P> {
         let isyms = Arc::clone(
             model
                 .input_symbols()
@@ -98,7 +99,7 @@ impl G2P {
         word: &Vec<Label>,
         maxlen: u8,
         invmap: &HashMap<Vec<Label>, Label>,
-    ) -> Result<VectorFst<TropicalWeight>> {
+    ) -> Result<StdVectorFst> {
         let mut fsa = VectorFst::<TropicalWeight>::new();
         let maxlen = maxlen as u32;
         fsa.add_state();
@@ -146,18 +147,12 @@ impl G2P {
         }
 
         // WTF
-        let fst: VectorFst<TropicalWeight> = compose::<
-            TropicalWeight,
-            VectorFst<TropicalWeight>,
-            VectorFst<TropicalWeight>,
-            _,
-            _,
-            _,
-        >(fst, &self.model)?;
+        let fst: StdVectorFst =
+            compose::<TropicalWeight, StdVectorFst, StdVectorFst, _, _, _>(fst, &self.model)?;
         if self.config.write_fsts {
             fst.write(word.to_owned() + ".lat.fst")?;
         }
-        let fst: VectorFst<TropicalWeight> = shortest_path(&fst)?;
+        let fst: StdVectorFst = shortest_path(&fst)?;
         if self.config.write_fsts {
             fst.write(word.to_owned() + ".path.fst")?;
         }

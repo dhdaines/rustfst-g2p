@@ -1,3 +1,4 @@
+use crate::{LogVectorFst, StdVectorFst};
 use anyhow::{anyhow, Result};
 use rustfst::algorithms::shortest_path;
 use rustfst::algorithms::weight_converters::SimpleWeightConverter;
@@ -46,7 +47,7 @@ pub struct Config {
 pub struct Aligner {
     pub config: Config,
     isyms: SymbolTable,
-    fsas: Vec<VectorFst<LogWeight>>,
+    fsas: Vec<LogVectorFst>,
     alignment_model: HashMap<Label, LogWeight>,
     prev_alignment_model: HashMap<Label, LogWeight>,
     total: LogWeight,
@@ -57,7 +58,7 @@ impl Aligner {
     /// Construct a new aligner with the given configuration
     pub fn new(config: Config) -> Aligner {
         let mut isyms = SymbolTable::empty();
-        let fsas = Vec::<VectorFst<LogWeight>>::new();
+        let fsas = Vec::<LogVectorFst>::new();
         let alignment_model = HashMap::<Label, LogWeight>::new();
         let prev_alignment_model = HashMap::<Label, LogWeight>::new();
         let total = LogWeight::zero();
@@ -258,8 +259,8 @@ impl Aligner {
             // Do not do any N-Best, forward-backward pruning, or any
             // other such nonsense which the Phonetisaurus code admits
             // is not very useful
-            let tfsa: VectorFst<TropicalWeight> = weight_convert(fsa, &mut mapper)?;
-            let tfsa: VectorFst<TropicalWeight> = shortest_path(&tfsa)?;
+            let tfsa: StdVectorFst = weight_convert(fsa, &mut mapper)?;
+            let tfsa: StdVectorFst = shortest_path(&tfsa)?;
             let path = decode_linear_fst(&tfsa)?;
             // Handling undefined symbols with map/filter is much too hard
             let mut syms = Vec::<&str>::new();
