@@ -11,6 +11,8 @@ use std::sync::Arc;
 pub struct Config {
     /// Grapheme separator
     pub gsep: String,
+    /// Phoneme skip marker
+    pub skip: String,
     /// Write the output FSTs for debugging
     pub write_fsts: bool,
 }
@@ -159,26 +161,30 @@ impl G2P {
             fst.write(word.to_owned() + ".path.fst")?;
         }
         let path = decode_linear_fst(&fst)?;
-        let syms: Result<Vec<&str>, _> = path
-            .olabels
-            .into_iter()
-            .flat_map(|label| {
-                if let Some(syms) = self.omap.get(&label) {
-                    syms.iter()
-                        .map(|&l| {
-                            self.osyms
-                                .get_symbol(l)
-                                .ok_or(anyhow!("Output label {} not found", l))
-                        })
-                        .collect()
-                } else if let Some(sym) = self.osyms.get_symbol(label) {
-                    // FIXME: should not have to create an extra Vec here!
-                    vec![Ok(sym)]
-                } else {
-                    vec![Err(anyhow!("Output label {} not found", label))]
+        // In Lisp or Python, this would easy in functional style, in
+        // Rust, because of the incomprehensible type inference... NO.
+        let mut wtf_rustc = Vec::<&str>::new();
+        for label in path.olabels {
+            if let Some(cluster) = self.omap.get(&label) {
+                for &l in cluster {
+                    // We should never have unknown labels in a cluster!
+                    let sym = self
+                        .osyms
+                        .get_symbol(l)
+                        .expect("Cluster has unknown labels");
+                    wtf_rustc.push(sym);
                 }
-            })
+            } else if let Some(sym) = self.osyms.get_symbol(label) {
+                wtf_rustc.push(sym);
+            } else {
+                // On the other hand the model might contain unknown labels
+                return Err(anyhow!("Output label {} not found in model", label));
+            }
+        }
+        let phones = wtf_rustc
+            .into_iter()
+            .filter(|&s| s != self.config.skip)
             .collect();
-        Ok((syms?, *path.weight.value()))
+        Ok((phones, *path.weight.value()))
     }
 }

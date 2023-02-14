@@ -73,6 +73,9 @@ enum Commands {
         /// Grapheme separator
         #[arg(long, default_value = "")]
         gsep: String,
+        /// Phoneme skip marker
+        #[arg(long, default_value = "_")]
+        skip: String,
         /// Write the output FSTs for debugging
         #[arg(long)]
         write_fsts: bool,
@@ -139,12 +142,20 @@ fn main() -> Result<()> {
             model,
             input,
             gsep,
+            skip,
             write_fsts,
             print_scores,
             nlog_probs,
         } => {
             let model = VectorFst::<TropicalWeight>::read(&model)?;
-            let g2p = G2P::new(G2PConfig { gsep, write_fsts }, model)?;
+            let g2p = G2P::new(
+                G2PConfig {
+                    gsep,
+                    skip,
+                    write_fsts,
+                },
+                model,
+            )?;
             let fh = File::open(input)?;
             let reader = BufReader::new(fh);
             for line in reader.lines() {
