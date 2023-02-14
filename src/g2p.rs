@@ -17,6 +17,9 @@ pub struct Config {
     pub write_fsts: bool,
 }
 
+type ClusterMap = HashMap<Label, Vec<Label>>;
+type InvClusterMap = HashMap<Vec<Label>, Label>;
+
 /// Grapheme to phoneme converter
 #[derive(Debug)]
 pub struct G2P {
@@ -31,9 +34,9 @@ pub struct G2P {
     /// Output symbol table
     osyms: Arc<SymbolTable>,
     /// Reverse mapping of input symbol clusters
-    inv_imap: HashMap<Vec<Label>, Label>,
+    inv_imap: InvClusterMap,
     /// Mapping of output symbol clusters
-    omap: HashMap<Label, Vec<Label>>,
+    omap: ClusterMap,
     // Other mappings are not used!
 }
 
@@ -42,12 +45,12 @@ impl G2P {
         let isyms = Arc::clone(
             model
                 .input_symbols()
-                .ok_or(anyhow!("No input symbol table"))?,
+                .ok_or_else(|| anyhow!("No input symbol table"))?,
         );
         let osyms = Arc::clone(
             model
                 .output_symbols()
-                .ok_or(anyhow!("No output symbol table"))?,
+                .ok_or_else(|| anyhow!("No output symbol table"))?,
         );
         tr_sort(&mut model, ILabelCompare {});
         let (imax, _imap, inv_imap) = Self::load_clusters(&isyms)?;
@@ -63,14 +66,12 @@ impl G2P {
         })
     }
 
-    fn load_clusters(
-        syms: &SymbolTable,
-    ) -> Result<(u8, HashMap<Label, Vec<Label>>, HashMap<Vec<Label>, Label>)> {
-        let mut clusters = HashMap::<Label, Vec<Label>>::new();
-        let mut invclusters = HashMap::<Vec<Label>, Label>::new();
+    fn load_clusters(syms: &SymbolTable) -> Result<(u8, ClusterMap, InvClusterMap)> {
+        let mut clusters = ClusterMap::new();
+        let mut invclusters = InvClusterMap::new();
         let tie = syms
             .get_symbol(1)
-            .ok_or(anyhow!("Cluster separator not found in symbol table"))?; // FIXME: stupid magic
+            .ok_or_else(|| anyhow!("Cluster separator not found in symbol table"))?; // FIXME: stupid magic
         let mut maxlen = 1;
         for i in 2..syms.len() as u32 {
             let sym = syms
@@ -80,7 +81,7 @@ impl G2P {
                 .split(tie)
                 .map(|s| {
                     syms.get_label(s)
-                        .ok_or(anyhow!("Symbol {} not found in cluster {}", s, sym))
+                        .ok_or_else(|| anyhow!("Symbol {} not found in cluster {}", s, sym))
                 })
                 .collect();
             let cluster = cluster?;
@@ -133,7 +134,7 @@ impl G2P {
             .map(|s| {
                 self.isyms
                     .get_label(s)
-                    .ok_or(anyhow!("Input symbol {} not found", s))
+                    .ok_or_else(|| anyhow!("Input symbol {} not found", s))
             })
             .collect();
 

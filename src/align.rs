@@ -5,6 +5,7 @@ use rustfst::prelude::*;
 use rustfst::semirings::DivideType::DivideAny;
 use rustfst::utils::decode_linear_fst;
 use std::cmp::min;
+use std::collections::hash_map::Entry::Vacant;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
@@ -86,27 +87,25 @@ impl Aligner {
     pub fn load_dictionary(&mut self, input: &PathBuf) -> Result<()> {
         let fh = File::open(input)?;
         let reader = BufReader::new(fh);
-        for line in reader.lines() {
-            if let Ok(spam) = line {
-                let fields: Vec<&str> = spam.trim().split("\t").filter(|s| !s.is_empty()).collect();
-                if fields.len() != 2 {
-                    return Err(anyhow!(
-                        "Malformed line (must separate in/out with TAB): {}",
-                        spam
-                    ));
-                }
-                let seq1: Vec<&str> = fields[0]
-                    .split(&self.config.s1_char_delim)
-                    .filter(|s| !s.is_empty())
-                    .collect();
-                let seq2: Vec<&str> = fields[1]
-                    .split(&self.config.s2_char_delim)
-                    .filter(|s| !s.is_empty())
-                    .collect();
-                // Just ignore failed alignments
-                if let Err(err) = self.add_entry(&seq1, &seq2) {
-                    eprintln!("Ignoring: {}", err);
-                }
+        for spam in reader.lines().flatten() {
+            let fields: Vec<&str> = spam.trim().split('\t').filter(|s| !s.is_empty()).collect();
+            if fields.len() != 2 {
+                return Err(anyhow!(
+                    "Malformed line (must separate in/out with TAB): {}",
+                    spam
+                ));
+            }
+            let seq1: Vec<&str> = fields[0]
+                .split(&self.config.s1_char_delim)
+                .filter(|s| !s.is_empty())
+                .collect();
+            let seq2: Vec<&str> = fields[1]
+                .split(&self.config.s2_char_delim)
+                .filter(|s| !s.is_empty())
+                .collect();
+            // Just ignore failed alignments
+            if let Err(err) = self.add_entry(&seq1, &seq2) {
+                eprintln!("Ignoring: {}", err);
             }
         }
         Ok(())
@@ -182,11 +181,12 @@ impl Aligner {
         }
         for q in fsa.states_iter() {
             for arc in fsa.get_trs(q)?.trs() {
-                if self.prev_alignment_model.contains_key(&arc.ilabel) {
+                // Thanks, Clippy!
+                if let Vacant(e) = self.prev_alignment_model.entry(arc.ilabel) {
+                    e.insert(arc.weight);
+                } else {
                     let weight = self.prev_alignment_model.get_mut(&arc.ilabel).unwrap();
                     weight.plus_assign(arc.weight)?;
-                } else {
-                    self.prev_alignment_model.insert(arc.ilabel, arc.weight);
                 }
                 self.total.plus_assign(arc.weight)?;
             }
@@ -212,7 +212,7 @@ impl Aligner {
                         let weight = self
                             .prev_alignment_model
                             .entry(arc.ilabel)
-                            .or_insert(LogWeight::zero());
+                            .or_insert_with(LogWeight::zero);
                         weight.plus_assign(gamma)?;
                         self.total.plus_assign(gamma)?;
                     }
