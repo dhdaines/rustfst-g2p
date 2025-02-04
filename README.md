@@ -1,6 +1,10 @@
 rustfst-g2p: the velociraptor of pronunciation generators
 =========================================================
 
+> [!IMPORTANT] This project is not complete in any way, in particular,
+> training is not implemented yet.  While I appreciate all the stars
+> (where did you people find this?) don't get your hopes up (but PRs are welcome)
+ 
 Back in days of yore, we used quaint devices known as weighted
 finite-state transducers to accomplish a variety of natural language
 and speech processing tasks.  Sure, they were not as sexy as
